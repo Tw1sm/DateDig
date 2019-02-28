@@ -32,6 +32,10 @@ Create, Access, or Write. Filters the range of time on files using either the Cr
 
 Text file that results will be written to
 
+.PARAMETER Hidden
+
+Add the -Force flag to Get-ChildItem to show hidden files
+
 .EXAMPLE
 
 Invoke-DateDig -Date 2/4/2019 -Time 4:49:00 -Period PM -Range 5 -FilterBy Create -OutputFile C:\Users\tw1sm\Desktop\example.txt
@@ -62,7 +66,10 @@ Invoke-DateDig -Date 2/4/2019 -Time 4:49:00 -Period AM -Range 5 -FilterBy Access
 
         [parameter(Mandatory=$true)]
         [String]
-        $OutputFile
+        $OutputFile,
+
+        [Switch]
+        $Hidden
     )
 
     BEGIN {
@@ -70,7 +77,7 @@ Invoke-DateDig -Date 2/4/2019 -Time 4:49:00 -Period AM -Range 5 -FilterBy Access
         $Drive = "$((get-location).Drive.Name)`:\"
 
         if ($FilterBy -eq "Create") {
-            $Action = "LastAccessTime"
+            $Action = "CreationTime"
         } ElseIf ($FilterBy -eq "Write" ) {
             $Action = "LastWriteTime"
         } ElseIf ($FilterBy -eq "Access") {
@@ -95,24 +102,46 @@ Invoke-DateDig -Date 2/4/2019 -Time 4:49:00 -Period AM -Range 5 -FilterBy Access
         
         $Upper = $TimeStamp.AddMinutes($Range)
         $Lower = $TimeStamp.AddMinutes(-$Range)
-        
-        if ($FilterBy -eq "Create") {
 
-            Get-ChildItem -File -Recurse -Path $Drive -ErrorAction Ignore | `
-                Where-Object {$_.CreationTime -ge $Lower -and $_.CreationTime -le $Upper} | `
-                Format-Table Name, Directory, Length, CreationTime, LastWriteTime, LastAccessTime > $OutputFile
+        if ($Hidden) {
+            if ($FilterBy -eq "Create") {
 
-        } ElseIf ($FilterBy -eq "Write" ) {
+                Get-ChildItem -File -Recurse -Path $Drive -Force -ErrorAction Ignore | `
+                    Where-Object {$_.CreationTime -ge $Lower -and $_.CreationTime -le $Upper} | `
+                    Format-Table Name, Directory, Length, CreationTime, LastWriteTime, LastAccessTime > $OutputFile
+    
+            } ElseIf ($FilterBy -eq "Write" ) {
+    
+                Get-ChildItem -File -Recurse -Path $Drive -Force -ErrorAction Ignore | `
+                    Where-Object {$_.LastWriteTime -ge $Lower -and $_.LastWriteTime -le $Upper} | `
+                    Format-Table Name, Directory, Length, CreationTime, LastWriteTime, LastAccessTime > $OutputFile
+    
+            } ElseIf ($FilterBy -eq "Access") {
+    
+                Get-ChildItem -File -Recurse -Path $Drive -Force -ErrorAction Ignore | `
+                    Where-Object {$_.LastAccessTime -ge $Lower -and $_.LastAccessTime -le $Upper} | `
+                    Format-Table Name, Directory, Length, CreationTime, LastWriteTime, LastAccessTime > $OutputFile
+            }
 
-            Get-ChildItem -File -Recurse -Path $Path -ErrorAction Ignore | `
-                Where-Object {$_.LastWriteTime -ge $Lower -and $_.LastWriteTime -le $Upper} | `
-                Format-Table Name, Directory, Length, CreationTime, LastWriteTime, LastAccessTime > $OutputFile
+        } Else {
+            if ($FilterBy -eq "Create") {
 
-        } ElseIf ($FilterBy -eq "Access") {
-
-            Get-ChildItem -File -Recurse -Path $Path -ErrorAction Ignore | `
-                Where-Object {$_.LastAccessTime -ge $Lower -and $_.LastAccessTime -le $Upper} | `
-                Format-Table Name, Directory, Length, CreationTime, LastWriteTime, LastAccessTime > $OutputFile
+                Get-ChildItem -File -Recurse -Path $Drive -ErrorAction Ignore | `
+                    Where-Object {$_.CreationTime -ge $Lower -and $_.CreationTime -le $Upper} | `
+                    Format-Table Name, Directory, Length, CreationTime, LastWriteTime, LastAccessTime > $OutputFile
+    
+            } ElseIf ($FilterBy -eq "Write" ) {
+    
+                Get-ChildItem -File -Recurse -Path $Drive -ErrorAction Ignore | `
+                    Where-Object {$_.LastWriteTime -ge $Lower -and $_.LastWriteTime -le $Upper} | `
+                    Format-Table Name, Directory, Length, CreationTime, LastWriteTime, LastAccessTime > $OutputFile
+    
+            } ElseIf ($FilterBy -eq "Access") {
+    
+                Get-ChildItem -File -Recurse -Path $Drive -ErrorAction Ignore | `
+                    Where-Object {$_.LastAccessTime -ge $Lower -and $_.LastAccessTime -le $Upper} | `
+                    Format-Table Name, Directory, Length, CreationTime, LastWriteTime, LastAccessTime > $OutputFile
+            }
         }
         
     }
